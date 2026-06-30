@@ -10,6 +10,7 @@ import { Spacing } from '@/constants/theme';
 import { useReports } from '@/hooks/useReports';
 import { useTheme } from '@/hooks/use-theme';
 import { RefreshCw } from 'lucide-react-native';
+import { DropdownSelect } from '@/components/dropdown-select';
 
 export default function FormScreen() {
   const { addReport, isSyncing, syncPendingReports } = useReports();
@@ -30,9 +31,42 @@ export default function FormScreen() {
   const [isLocating, setIsLocating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Catalogs managed from the web admin panel (public GET, no login needed).
+  const [technicians, setTechnicians] = useState<string[]>([]);
+  const [parts, setParts] = useState<string[]>([]);
+
   useEffect(() => {
     getLocation();
+    loadCatalogs();
   }, []);
+
+  const loadCatalogs = async () => {
+    const API_BASE =
+      process.env.EXPO_PUBLIC_API_URL || 'https://logistic-factory-api.onrender.com';
+    // Retry to ride out Render free-tier cold starts (502 while the API wakes).
+    const fetchList = async (path: string): Promise<any[]> => {
+      for (let i = 0; i < 5; i++) {
+        try {
+          const res = await fetch(`${API_BASE}${path}`);
+          if (res.ok) return await res.json();
+          if (res.status >= 502 && res.status <= 504) {
+            await new Promise((r) => setTimeout(r, 4000));
+            continue;
+          }
+          return [];
+        } catch {
+          await new Promise((r) => setTimeout(r, 4000));
+        }
+      }
+      return [];
+    };
+    const [techs, prts] = await Promise.all([
+      fetchList('/api/technicians'),
+      fetchList('/api/parts'),
+    ]);
+    setTechnicians(techs.map((t: any) => t.name).filter(Boolean));
+    setParts(prts.map((p: any) => p.name).filter(Boolean));
+  };
 
   const getLocation = async () => {
     setIsLocating(true);
@@ -119,16 +153,15 @@ export default function FormScreen() {
             </View>
 
             <ThemedText style={styles.label}>Técnico</ThemedText>
-            <View style={styles.inputContainer}>
-              <Settings color="#0056FF" size={20} style={styles.inputIcon} />
-              <TextInput 
-                style={[styles.input, { color: themeColors.text }]} 
-                value={technician}
-                onChangeText={setTechnician}
-                placeholder="Nombre del técnico"
-                placeholderTextColor="#888"
-              />
-            </View>
+            <DropdownSelect
+              icon={<Settings color="#0056FF" size={20} style={styles.inputIcon} />}
+              placeholder="Selecciona un técnico"
+              options={technicians}
+              value={technician}
+              onChange={setTechnician}
+              textColor={themeColors.text}
+              emptyText="No hay técnicos. Agrégalos en el panel web (Técnicos)."
+            />
 
             <ThemedText style={styles.label}>Vehículo</ThemedText>
             <View style={styles.inputContainer}>
@@ -199,16 +232,16 @@ export default function FormScreen() {
             </View>
 
             <ThemedText style={styles.label}>Repuestos Utilizados</ThemedText>
-            <View style={styles.inputContainer}>
-              <Settings color="#0056FF" size={20} style={styles.inputIcon} />
-              <TextInput 
-                style={[styles.input, { color: themeColors.text }]} 
-                value={partsUsed}
-                onChangeText={setPartsUsed}
-                placeholder="Ej. Filtro de aceite, Pastillas..."
-                placeholderTextColor="#888"
-              />
-            </View>
+            <DropdownSelect
+              icon={<Settings color="#0056FF" size={20} style={styles.inputIcon} />}
+              placeholder="Selecciona repuestos"
+              options={parts}
+              value={partsUsed}
+              onChange={setPartsUsed}
+              multiple
+              textColor={themeColors.text}
+              emptyText="No hay repuestos. Agrégalos en el panel web (Repuestos)."
+            />
 
             <ThemedText style={styles.label}>Estado Final</ThemedText>
             <View style={styles.inputContainer}>

@@ -174,7 +174,8 @@ def delete_report(
 
 # --- Technicians CRUD (admin only) ---
 @app.get("/api/technicians", response_model=list[schemas.TechnicianResponse])
-def get_technicians(db: Session = Depends(get_db), _: models.User = Depends(auth.require_admin)):
+def get_technicians(db: Session = Depends(get_db)):
+    # Public read so the mobile app (no login) can populate its dropdown.
     return db.query(models.Technician).all()
 
 
@@ -206,7 +207,8 @@ def delete_technician(
 
 # --- Parts CRUD (admin only) ---
 @app.get("/api/parts", response_model=list[schemas.PartResponse])
-def get_parts(db: Session = Depends(get_db), _: models.User = Depends(auth.require_admin)):
+def get_parts(db: Session = Depends(get_db)):
+    # Public read so the mobile app (no login) can populate its dropdown.
     return db.query(models.Part).all()
 
 
