@@ -27,8 +27,45 @@ const STORAGE_KEY = '@reports_history';
 const API_BASE =
   process.env.EXPO_PUBLIC_API_URL || 'https://logistic-factory-api.onrender.com';
 
-const SYNC_URL = `${API_BASE}/api/reports`; // POST /sync, GET to reconcile
-const SYNC_POST_URL = `${SYNC_URL}/sync`;
+const SYNC_URL = `${API_BASE}/api/reports`; // GET to reconcile
+const SYNC_POST_URL = `${SYNC_URL}/sync`; // POST to upload
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Render's free tier sleeps after ~15 min of inactivity; the first request then
+// returns 502/503/504 for ~30-60s while the instance wakes back up. Without
+// retries that surfaces to the user as "Error del servidor". This retries those
+// transient gateway errors (and network drops) with a fixed backoff, and aborts
+// any single attempt that hangs too long so the loop can move on.
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit = {},
+  { retries = 5, backoffMs = 5000, timeoutMs = 70000 } = {}
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      // Gateway errors mean the instance is still waking — wait and retry.
+      if (res.status >= 502 && res.status <= 504 && attempt < retries) {
+        await sleep(backoffMs);
+        continue;
+      }
+      return res;
+    } catch (error) {
+      clearTimeout(timer);
+      lastError = error;
+      if (attempt < retries) {
+        await sleep(backoffMs);
+        continue;
+      }
+    }
+  }
+  throw lastError ?? new Error('fetchWithRetry: retries exhausted');
+}
 
 export function useReports() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -37,7 +74,11 @@ export function useReports() {
 
   useEffect(() => {
     loadReports();
-    
+
+    // Wake the (possibly sleeping) backend early, so it's warm by the time the
+    // user submits a report. Fire-and-forget.
+    fetchWithRetry(`${API_BASE}/`, {}, { retries: 3, backoffMs: 4000 }).catch(() => {});
+
     // Listen for network changes to trigger auto-sync
     const unsubscribe = NetInfo.addEventListener(state => {
       if (state.isConnected && state.isInternetReachable) {
@@ -75,14 +116,14 @@ export function useReports() {
         code: generateCode(),
         sync_status: 'pending'
       };
-      
+
       const updatedReports = [newReport, ...reports];
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedReports));
       setReports(updatedReports);
-      
+
       // Try to sync immediately if online
       syncPendingReports();
-      
+
       return true;
     } catch (error) {
       console.error('Error saving report:', error);
@@ -106,7 +147,7 @@ export function useReports() {
       // fall back to pushing whatever is still pending.
       let backendIds = new Set<string>();
       try {
-        const listRes = await fetch(SYNC_URL);
+        const listRes = await fetchWithRetry(SYNC_URL);
         if (listRes.ok) {
           const remote = (await listRes.json()) as { id: string }[];
           backendIds = new Set(remote.map(r => r.id));
@@ -124,7 +165,8 @@ export function useReports() {
       setIsSyncing(true);
 
       // The /sync endpoint is idempotent (dedupes by id), so re-pushing is safe.
-      const response = await fetch(SYNC_POST_URL, {
+      // fetchWithRetry survives Render free-tier cold starts (502 while waking).
+      const response = await fetchWithRetry(SYNC_POST_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -140,13 +182,13 @@ export function useReports() {
 
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedReports));
         setReports(updatedReports);
-        alert('✅ ¡Informes sincronizados con la nube de Render!');
+        alert('✅ ¡Informes sincronizados con la nube!');
       } else {
-        alert('❌ Error del servidor de Render. Asegúrate de que tu URL sea correcta.');
+        alert(`❌ El servidor respondió con un error (${response.status}). Se reintentará automáticamente.`);
       }
     } catch (error) {
-      alert('❌ Error de conexión: No se pudo contactar a Render. Revisa la URL en el código.');
-      console.log('Sync failed, will retry later when online.');
+      console.log('Sync failed, will retry later when online.', error);
+      alert('⏳ No se pudo contactar al servidor (puede estar iniciando). Se reintentará solo cuando haya conexión.');
     } finally {
       setIsSyncing(false);
     }
