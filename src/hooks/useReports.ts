@@ -141,24 +141,11 @@ export function useReports() {
       const currentReports: Report[] = JSON.parse(stored);
       if (currentReports.length === 0) return;
 
-      // Ask the backend which reports it already has. This lets us re-push any
-      // report the server lost (e.g. after a backend restart/redeploy) instead
-      // of only the locally-'pending' ones. If the check fails (offline), we
-      // fall back to pushing whatever is still pending.
-      let backendIds = new Set<string>();
-      try {
-        const listRes = await fetchWithRetry(SYNC_URL);
-        if (listRes.ok) {
-          const remote = (await listRes.json()) as { id: string }[];
-          backendIds = new Set(remote.map(r => r.id));
-        }
-      } catch {
-        // Offline or server unreachable: keep going with pending-only below.
-      }
-
-      const reportsToPush = currentReports.filter(
-        r => r.sync_status === 'pending' || !backendIds.has(r.id)
-      );
+      // Push only NEW (pending) reports. We deliberately do NOT re-push reports
+      // the backend is missing: now that data persists in Postgres, a report
+      // absent from the server was deleted on purpose from the admin panel, so
+      // re-uploading it would make deletions reappear.
+      const reportsToPush = currentReports.filter(r => r.sync_status === 'pending');
 
       if (reportsToPush.length === 0) return;
 
