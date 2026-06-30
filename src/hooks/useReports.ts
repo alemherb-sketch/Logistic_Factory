@@ -27,17 +27,8 @@ const STORAGE_KEY = '@reports_history';
 
 // Helper to get the correct API URL depending on how the app is running
 const getApiUrl = () => {
-  // 🚀 PARA PRODUCCIÓN (RENDER): Descomenta la siguiente línea y pon la URL que te dé Render
-  // return 'https://logistic-factory-api.onrender.com/api/reports/sync';
-
-  // If running in Expo Go on a physical device, get the PC's local IP address
-  const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri) {
-    const ip = hostUri.split(':')[0];
-    return `http://${ip}:8000/api/reports/sync`;
-  }
-  // Fallback for Android emulator
-  return 'http://10.0.2.2:8000/api/reports/sync';
+  // 🚀 PARA PRODUCCIÓN (RENDER): 
+  return 'https://logistic-factory-api.onrender.com/api/reports/sync';
 };
 
 const API_URL = getApiUrl();
