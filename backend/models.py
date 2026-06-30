@@ -26,7 +26,9 @@ class Part(Base):
 class Report(Base):
     __tablename__ = "reports"
     id = Column(String, primary_key=True, index=True) # UUID from mobile
-    code = Column(String, unique=True, index=True)
+    # NOT unique: the app generates codes randomly (LF-date-NNN, only 900/day) so
+    # collisions happen. 'id' is the real key; a duplicate code must not 500 sync.
+    code = Column(String, index=True)
     date = Column(String)
     technician = Column(String)
     vehicle = Column(String)

@@ -29,6 +29,24 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+
+def _run_migrations():
+    """Lightweight, idempotent schema fixes for the live (Postgres) database.
+
+    Drops the legacy UNIQUE index on reports.code: codes are generated randomly
+    by the app and can collide, which made a whole sync batch fail with 500.
+    """
+    from sqlalchemy import text
+    try:
+        with engine.begin() as conn:
+            if engine.dialect.name == "postgresql":
+                conn.execute(text("DROP INDEX IF EXISTS ix_reports_code"))
+    except Exception as e:  # never block startup on a migration
+        print(f"[db] migration (code-not-unique) skipped: {e}")
+
+
+_run_migrations()
+
 def get_db():
     db = SessionLocal()
     try:
