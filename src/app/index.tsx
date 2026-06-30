@@ -97,15 +97,8 @@ export default function FormScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <ThemedText style={styles.headerCompany}>LOGISTIC FACTORY</ThemedText>
-              <ThemedText style={styles.headerTitle}>Informe Técnico</ThemedText>
-            </View>
-            <TouchableOpacity onPress={syncPendingReports} disabled={isSyncing} style={styles.syncButton}>
-              <RefreshCw color="#fff" size={24} />
-            </TouchableOpacity>
-          </View>
+          <ThemedText style={styles.headerCompany}>LOGISTIC FACTORY</ThemedText>
+          <ThemedText style={styles.headerTitle}>Informe Técnico</ThemedText>
           {isSyncing && (
              <ThemedText style={styles.syncText}>Sincronizando con la nube...</ThemedText>
           )}
@@ -262,6 +255,17 @@ export default function FormScreen() {
             )}
           </TouchableOpacity>
 
+          <TouchableOpacity 
+            style={[styles.syncButtonLarge, isSyncing && styles.saveButtonDisabled]} 
+            onPress={syncPendingReports} 
+            disabled={isSyncing}
+          >
+            <RefreshCw color="#0056FF" size={20} style={{ marginRight: 8 }} />
+            <ThemedText style={styles.syncButtonLargeText}>
+              {isSyncing ? 'Sincronizando...' : 'Sincronizar a la Nube'}
+            </ThemedText>
+          </TouchableOpacity>
+
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
@@ -306,10 +310,21 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
     fontStyle: 'italic',
   },
-  syncButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: Spacing.two,
-    borderRadius: Spacing.full,
+  syncButtonLarge: {
+    backgroundColor: 'rgba(0, 86, 255, 0.1)',
+    marginTop: Spacing.four,
+    paddingVertical: Spacing.three,
+    borderRadius: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 86, 255, 0.3)',
+  },
+  syncButtonLargeText: {
+    color: '#0056FF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   scrollContent: {
     padding: Spacing.four,
