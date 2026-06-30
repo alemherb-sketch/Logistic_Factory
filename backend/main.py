@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import models, schemas, auth
@@ -16,6 +16,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+last_error = None
+
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        import traceback
+        global last_error
+        last_error = traceback.format_exc()
+        raise
+
+@app.get("/api/dev/last-error")
+def get_last_error():
+    return {"error": last_error}
 
 
 from sqlalchemy import text
