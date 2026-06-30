@@ -27,10 +27,14 @@ export default function Technicians() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
-    }).then(() => {
+    }).then((res) => {
+      if(!res.ok) throw new Error('Network response was not ok');
       setShowModal(false);
       setFormData({ name: '', email: '', phone: '' });
       fetchTechnicians();
+    }).catch(err => {
+      alert("Error de conexión: Asegúrate de que el servidor Backend (Python) esté en ejecución en el puerto 8000.");
+      console.error(err);
     });
   };
 
