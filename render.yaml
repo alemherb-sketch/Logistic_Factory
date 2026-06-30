@@ -1,0 +1,22 @@
+services:
+  # 1. API Backend (Python FastAPI)
+  - type: web
+    name: logistic-factory-api
+    env: python
+    region: ohio
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+
+  # 2. Frontend Web (React / Vite)
+  - type: web
+    name: logistic-factory-web
+    env: static
+    region: ohio
+    buildCommand: "cd web && npm install && npm run build"
+    staticPublishPath: ./web/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
