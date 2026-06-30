@@ -107,7 +107,6 @@ def delete_user(
 def sync_reports(
     request: schemas.ReportSyncRequest,
     db: Session = Depends(get_db),
-    current: models.User = Depends(auth.get_current_user),
 ):
     synced_ids = []
     for rep in request.reports:
@@ -117,7 +116,7 @@ def sync_reports(
                 id=rep.id,
                 code=rep.code,
                 date=rep.date,
-                technician=current.full_name or current.username,  # auto del login
+                technician=rep.technician,  # fallback to the app's field
                 vehicle=rep.vehicle,
                 plate=rep.plate,
                 brand=rep.brand,
@@ -127,7 +126,7 @@ def sync_reports(
                 finalStatus=rep.finalStatus,
                 latitude=rep.location.latitude if rep.location else None,
                 longitude=rep.location.longitude if rep.location else None,
-                owner_username=current.username,
+                owner_username=None,
             )
             db.add(new_report)
         synced_ids.append(rep.id)
@@ -139,12 +138,8 @@ def sync_reports(
 @app.get("/api/reports")
 def get_reports(
     db: Session = Depends(get_db),
-    current: models.User = Depends(auth.get_current_user),
 ):
     q = db.query(models.Report)
-    # Technicians only see their own reports; admins see everything.
-    if current.role != "admin":
-        q = q.filter(models.Report.owner_username == current.username)
     return q.order_by(models.Report.created_at.desc()).all()
 
 
