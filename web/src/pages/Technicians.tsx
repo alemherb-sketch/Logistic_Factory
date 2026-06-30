@@ -7,7 +7,7 @@ export default function Technicians() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const API_URL = import.meta.env.VITE_API_URL || 'https://logistic-factory-api.onrender.com';
 
   const fetchTechnicians = () => {
     fetch(`${API_URL}/api/technicians`)

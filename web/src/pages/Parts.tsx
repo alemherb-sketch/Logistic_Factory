@@ -7,7 +7,7 @@ export default function Parts() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', stock: 0 });
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const API_URL = import.meta.env.VITE_API_URL || 'https://logistic-factory-api.onrender.com';
 
   const fetchParts = () => {
     fetch(`${API_URL}/api/parts`)
