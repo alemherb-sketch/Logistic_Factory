@@ -16,6 +16,14 @@ services:
       # back to ephemeral SQLite (data is lost on every restart).
       - key: DATABASE_URL
         sync: false
+      # Stable signing key for JWT login tokens (Render genera y fija un valor).
+      - key: JWT_SECRET
+        generateValue: true
+      # Admin inicial (cámbialo aquí antes del primer deploy con Neon).
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
 
   # 2. Frontend Web (React / Vite)
   - type: web

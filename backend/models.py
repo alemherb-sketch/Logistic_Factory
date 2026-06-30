@@ -13,7 +13,9 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
-    role = Column(String)
+    full_name = Column(String, default="")
+    hashed_password = Column(String)
+    role = Column(String, default="technician")  # 'admin' | 'technician'
 
 class Part(Base):
     __tablename__ = "parts"
@@ -36,4 +38,5 @@ class Report(Base):
     finalStatus = Column(String)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    owner_username = Column(String, index=True, nullable=True)  # técnico que lo creó
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
