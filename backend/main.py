@@ -18,8 +18,24 @@ app.add_middleware(
 )
 
 
+from sqlalchemy import text
+
 @app.on_event("startup")
 def on_startup():
+    # Safely migrate existing tables if columns are missing
+    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        migrations = [
+            "ALTER TABLE users ADD COLUMN full_name VARCHAR DEFAULT ''",
+            "ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'technician'",
+            "ALTER TABLE reports ADD COLUMN owner_username VARCHAR",
+            "ALTER TABLE reports ADD COLUMN created_at TIMESTAMP"
+        ]
+        for q in migrations:
+            try:
+                conn.execute(text(q))
+            except Exception:
+                pass
+
     # Create the bootstrap admin account if none exists. Never let a seeding
     # hiccup take the whole API down.
     try:
