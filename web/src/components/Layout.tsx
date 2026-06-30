@@ -16,7 +16,7 @@ export default function Layout() {
           <nav className="flex space-x-6">
             <NavLink 
               to="/" 
-              className={({ isActive }) => 
+              className={({ isActive }: { isActive: boolean }) => 
                 `flex items-center space-x-1 transition ${isActive ? 'text-brand-100 font-bold' : 'hover:text-brand-200'}`
               }
             >
@@ -24,7 +24,7 @@ export default function Layout() {
             </NavLink>
             <NavLink 
               to="/tecnicos" 
-              className={({ isActive }) => 
+              className={({ isActive }: { isActive: boolean }) => 
                 `flex items-center space-x-1 transition ${isActive ? 'text-brand-100 font-bold' : 'hover:text-brand-200'}`
               }
             >
@@ -32,7 +32,7 @@ export default function Layout() {
             </NavLink>
             <NavLink 
               to="/repuestos" 
-              className={({ isActive }) => 
+              className={({ isActive }: { isActive: boolean }) => 
                 `flex items-center space-x-1 transition ${isActive ? 'text-brand-100 font-bold' : 'hover:text-brand-200'}`
               }
             >
