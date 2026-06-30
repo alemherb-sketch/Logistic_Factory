@@ -1,12 +1,3 @@
-# Managed Postgres so synced reports survive restarts/redeploys.
-# (Free SQLite on Render lives on an ephemeral disk and is wiped on every restart.)
-databases:
-  - name: logistic-factory-db
-    plan: free
-    region: ohio
-    databaseName: logistic_factory
-    user: logistic_factory
-
 services:
   # 1. API Backend (Python FastAPI)
   - type: web
@@ -19,11 +10,12 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.0
-      # Injected automatically from the managed database above.
+      # Persistent Postgres connection string (e.g. Neon). Set MANUALLY in the
+      # Render dashboard, not in git: it's a secret, and an external DB avoids
+      # Render's "one free database per account" limit. If unset, the API falls
+      # back to ephemeral SQLite (data is lost on every restart).
       - key: DATABASE_URL
-        fromDatabase:
-          name: logistic-factory-db
-          property: connectionString
+        sync: false
 
   # 2. Frontend Web (React / Vite)
   - type: web
@@ -34,7 +26,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 20.14.0
-      # Vite freezes VITE_* at BUILD time. This must be the real API URL,
-      # NOT a placeholder. A wrong value here is what broke web<->app sync.
+      # Vite freezes VITE_* at BUILD time. Must be the real API URL,
+      # NOT a placeholder. A wrong value here breaks web<->app sync.
       - key: VITE_API_URL
         value: https://logistic-factory-api.onrender.com
