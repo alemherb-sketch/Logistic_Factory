@@ -159,6 +159,19 @@ def get_reports(
     return q.order_by(models.Report.created_at.desc()).all()
 
 
+@app.delete("/api/reports/{report_id}")
+def delete_report(
+    report_id: str,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth.require_admin),
+):
+    rep = db.query(models.Report).filter(models.Report.id == report_id).first()
+    if rep:
+        db.delete(rep)
+        db.commit()
+    return {"message": "Deleted"}
+
+
 # --- Technicians CRUD (admin only) ---
 @app.get("/api/technicians", response_model=list[schemas.TechnicianResponse])
 def get_technicians(db: Session = Depends(get_db), _: models.User = Depends(auth.require_admin)):
