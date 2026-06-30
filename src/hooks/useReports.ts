@@ -125,8 +125,12 @@ export function useReports() {
         
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedReports));
         setReports(updatedReports);
+        alert('✅ ¡Informes sincronizados con la nube de Render!');
+      } else {
+        alert('❌ Error del servidor de Render. Asegúrate de que tu URL sea correcta.');
       }
     } catch (error) {
+      alert('❌ Error de conexión: No se pudo contactar a Render. Revisa la URL en el código.');
       console.log('Sync failed, will retry later when online.');
     } finally {
       setIsSyncing(false);

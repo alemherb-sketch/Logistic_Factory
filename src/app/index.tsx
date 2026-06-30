@@ -9,9 +9,10 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useReports } from '@/hooks/useReports';
 import { useTheme } from '@/hooks/use-theme';
+import { RefreshCw } from 'lucide-react-native';
 
 export default function FormScreen() {
-  const { addReport, isSyncing } = useReports();
+  const { addReport, isSyncing, syncPendingReports } = useReports();
   const themeColors = useTheme();
   
   // Fields
@@ -96,10 +97,17 @@ export default function FormScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <ThemedText style={styles.headerCompany}>LOGISTIC FACTORY</ThemedText>
-          <ThemedText style={styles.headerTitle}>Informe Técnico</ThemedText>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <ThemedText style={styles.headerCompany}>LOGISTIC FACTORY</ThemedText>
+              <ThemedText style={styles.headerTitle}>Informe Técnico</ThemedText>
+            </View>
+            <TouchableOpacity onPress={syncPendingReports} disabled={isSyncing} style={styles.syncButton}>
+              <RefreshCw color="#fff" size={24} />
+            </TouchableOpacity>
+          </View>
           {isSyncing && (
-             <ThemedText style={styles.syncText}>Sincronizando...</ThemedText>
+             <ThemedText style={styles.syncText}>Sincronizando con la nube...</ThemedText>
           )}
         </View>
 
@@ -295,8 +303,13 @@ const styles = StyleSheet.create({
   syncText: {
     color: '#fff',
     fontSize: 12,
-    marginTop: Spacing.one,
+    marginTop: Spacing.two,
     fontStyle: 'italic',
+  },
+  syncButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: Spacing.two,
+    borderRadius: Spacing.full,
   },
   scrollContent: {
     padding: Spacing.four,
