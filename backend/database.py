@@ -2,9 +2,14 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# In production set DATABASE_URL (e.g. Render Postgres) so data survives restarts
-# and redeploys. Falls back to a local SQLite file for development.
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./logistic_factory.db")
+# In production set DATABASE_URL (e.g. Neon Postgres) so data survives restarts
+# and redeploys. An UNSET or EMPTY value falls back to local SQLite. The empty
+# check matters on Render: a Blueprint can create DATABASE_URL with an empty
+# value (sync:false), and os.getenv would then return "" and crash create_engine
+# with "Could not parse SQLAlchemy URL".
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+if not SQLALCHEMY_DATABASE_URL:
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./logistic_factory.db"
 
 # Render/Heroku expose "postgres://" but SQLAlchemy requires "postgresql://".
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
