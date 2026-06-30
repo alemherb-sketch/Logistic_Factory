@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
 class Location(BaseModel):
@@ -24,3 +24,26 @@ class ReportSyncRequest(BaseModel):
 
 class ReportResponse(ReportBase):
     pass
+
+class TechnicianBase(BaseModel):
+    name: str
+    email: str
+    phone: str
+
+class TechnicianCreate(TechnicianBase):
+    pass
+
+class TechnicianResponse(TechnicianBase):
+    id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class PartBase(BaseModel):
+    name: str
+    stock: int
+
+class PartCreate(PartBase):
+    pass
+
+class PartResponse(PartBase):
+    id: int
+    model_config = ConfigDict(from_attributes=True)

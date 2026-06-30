@@ -54,4 +54,44 @@ def get_reports(db: Session = Depends(get_db)):
     reports = db.query(models.Report).order_by(models.Report.created_at.desc()).all()
     return reports
 
-# Crud endpoints for Technicians, Users, Parts can be added here
+# --- Technicians CRUD ---
+@app.get("/api/technicians", response_model=list[schemas.TechnicianResponse])
+def get_technicians(db: Session = Depends(get_db)):
+    return db.query(models.Technician).all()
+
+@app.post("/api/technicians", response_model=schemas.TechnicianResponse)
+def create_technician(tech: schemas.TechnicianCreate, db: Session = Depends(get_db)):
+    db_tech = models.Technician(**tech.model_dump())
+    db.add(db_tech)
+    db.commit()
+    db.refresh(db_tech)
+    return db_tech
+
+@app.delete("/api/technicians/{tech_id}")
+def delete_technician(tech_id: int, db: Session = Depends(get_db)):
+    db_tech = db.query(models.Technician).filter(models.Technician.id == tech_id).first()
+    if db_tech:
+        db.delete(db_tech)
+        db.commit()
+    return {"message": "Deleted"}
+
+# --- Parts CRUD ---
+@app.get("/api/parts", response_model=list[schemas.PartResponse])
+def get_parts(db: Session = Depends(get_db)):
+    return db.query(models.Part).all()
+
+@app.post("/api/parts", response_model=schemas.PartResponse)
+def create_part(part: schemas.PartCreate, db: Session = Depends(get_db)):
+    db_part = models.Part(**part.model_dump())
+    db.add(db_part)
+    db.commit()
+    db.refresh(db_part)
+    return db_part
+
+@app.delete("/api/parts/{part_id}")
+def delete_part(part_id: int, db: Session = Depends(get_db)):
+    db_part = db.query(models.Part).filter(models.Part.id == part_id).first()
+    if db_part:
+        db.delete(db_part)
+        db.commit()
+    return {"message": "Deleted"}
