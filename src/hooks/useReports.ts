@@ -21,17 +21,14 @@ export interface Report {
   sync_status: 'pending' | 'synced';
 }
 
-import Constants from 'expo-constants';
-
 const STORAGE_KEY = '@reports_history';
 
-// Helper to get the correct API URL depending on how the app is running
-const getApiUrl = () => {
-  // 🚀 PARA PRODUCCIÓN (RENDER): 
-  return 'https://logistic-factory-api.onrender.com/api/reports/sync';
-};
+// Base API URL (Render production). Override with EXPO_PUBLIC_API_URL if needed.
+const API_BASE =
+  process.env.EXPO_PUBLIC_API_URL || 'https://logistic-factory-api.onrender.com';
 
-const API_URL = getApiUrl();
+const SYNC_URL = `${API_BASE}/api/reports`; // POST /sync, GET to reconcile
+const SYNC_POST_URL = `${SYNC_URL}/sync`;
 
 export function useReports() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -95,34 +92,52 @@ export function useReports() {
 
   const syncPendingReports = async () => {
     if (isSyncing) return;
-    
+
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (!stored) return;
-      
+
       const currentReports: Report[] = JSON.parse(stored);
-      const pendingReports = currentReports.filter(r => r.sync_status === 'pending');
-      
-      if (pendingReports.length === 0) return;
+      if (currentReports.length === 0) return;
+
+      // Ask the backend which reports it already has. This lets us re-push any
+      // report the server lost (e.g. after a backend restart/redeploy) instead
+      // of only the locally-'pending' ones. If the check fails (offline), we
+      // fall back to pushing whatever is still pending.
+      let backendIds = new Set<string>();
+      try {
+        const listRes = await fetch(SYNC_URL);
+        if (listRes.ok) {
+          const remote = (await listRes.json()) as { id: string }[];
+          backendIds = new Set(remote.map(r => r.id));
+        }
+      } catch {
+        // Offline or server unreachable: keep going with pending-only below.
+      }
+
+      const reportsToPush = currentReports.filter(
+        r => r.sync_status === 'pending' || !backendIds.has(r.id)
+      );
+
+      if (reportsToPush.length === 0) return;
 
       setIsSyncing(true);
-      
-      // Attempt to send to the backend
-      const response = await fetch(API_URL, {
+
+      // The /sync endpoint is idempotent (dedupes by id), so re-pushing is safe.
+      const response = await fetch(SYNC_POST_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ reports: pendingReports })
+        body: JSON.stringify({ reports: reportsToPush })
       });
 
       if (response.ok) {
-        // Mark all sent reports as synced
-        const syncedIds = pendingReports.map(r => r.id);
-        const updatedReports = currentReports.map(r => 
-          syncedIds.includes(r.id) ? { ...r, sync_status: 'synced' as const } : r
+        const pushedIds = reportsToPush.map(r => r.id);
+        const updatedReports = currentReports.map(r =>
+          pushedIds.includes(r.id) ? { ...r, sync_status: 'synced' as const } : r
         );
-        
+
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedReports));
         setReports(updatedReports);
         alert('✅ ¡Informes sincronizados con la nube de Render!');
