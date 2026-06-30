@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, Trash2 } from 'lucide-react';
+import { apiFetch } from '../api';
 
 export default function Technicians() {
   const [technicians, setTechnicians] = useState([]);
@@ -7,11 +8,9 @@ export default function Technicians() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
 
-  const API_URL = import.meta.env.VITE_API_URL || 'https://logistic-factory-api.onrender.com';
-
   const fetchTechnicians = () => {
-    fetch(`${API_URL}/api/technicians`)
-      .then(res => res.json())
+    apiFetch('/api/technicians')
+      .then(res => (res.ok ? res.json() : []))
       .then(data => {
         setTechnicians(data);
         setLoading(false);
@@ -25,9 +24,8 @@ export default function Technicians() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetch(`${API_URL}/api/technicians`, {
+    apiFetch('/api/technicians', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     }).then((res) => {
       if(!res.ok) throw new Error('Network response was not ok');
@@ -35,14 +33,14 @@ export default function Technicians() {
       setFormData({ name: '', email: '', phone: '' });
       fetchTechnicians();
     }).catch(err => {
-      alert("Error de conexión: Asegúrate de que el servidor Backend (Python) esté en ejecución en el puerto 8000.");
+      alert("No se pudo guardar el técnico. Revisa tu conexión e intenta de nuevo.");
       console.error(err);
     });
   };
 
   const handleDelete = (id: number) => {
     if(confirm('¿Seguro que deseas eliminar este técnico?')) {
-      fetch(`${API_URL}/api/technicians/${id}`, { method: 'DELETE' })
+      apiFetch(`/api/technicians/${id}`, { method: 'DELETE' })
         .then(() => fetchTechnicians());
     }
   };

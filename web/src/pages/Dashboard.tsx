@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { FileText, Users, Search, MapPin } from 'lucide-react';
+import { apiFetch } from '../api';
 
 export default function Dashboard() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const API_URL = import.meta.env.VITE_API_URL || 'https://logistic-factory-api.onrender.com';
-    // Fetch reports from FastAPI backend
-    fetch(`${API_URL}/api/reports`)
-      .then(res => res.json())
+    // Fetch reports from FastAPI backend (auth token attached by apiFetch)
+    apiFetch('/api/reports')
+      .then(res => (res.ok ? res.json() : []))
       .then(data => {
         setReports(data);
         setLoading(false);

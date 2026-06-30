@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Settings, Trash2 } from 'lucide-react';
+import { apiFetch } from '../api';
 
 export default function Parts() {
   const [parts, setParts] = useState([]);
@@ -7,11 +8,9 @@ export default function Parts() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', stock: 0 });
 
-  const API_URL = import.meta.env.VITE_API_URL || 'https://logistic-factory-api.onrender.com';
-
   const fetchParts = () => {
-    fetch(`${API_URL}/api/parts`)
-      .then(res => res.json())
+    apiFetch('/api/parts')
+      .then(res => (res.ok ? res.json() : []))
       .then(data => {
         setParts(data);
         setLoading(false);
@@ -25,9 +24,8 @@ export default function Parts() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetch(`${API_URL}/api/parts`, {
+    apiFetch('/api/parts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     }).then((res) => {
       if(!res.ok) throw new Error('Network response was not ok');
@@ -35,14 +33,14 @@ export default function Parts() {
       setFormData({ name: '', stock: 0 });
       fetchParts();
     }).catch(err => {
-      alert("Error de conexión: Asegúrate de que el servidor Backend (Python) esté en ejecución en el puerto 8000.");
+      alert("No se pudo guardar el repuesto. Revisa tu conexión e intenta de nuevo.");
       console.error(err);
     });
   };
 
   const handleDelete = (id: number) => {
     if(confirm('¿Seguro que deseas eliminar este repuesto?')) {
-      fetch(`${API_URL}/api/parts/${id}`, { method: 'DELETE' })
+      apiFetch(`/api/parts/${id}`, { method: 'DELETE' })
         .then(() => fetchParts());
     }
   };
