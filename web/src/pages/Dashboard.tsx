@@ -6,8 +6,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     // Fetch reports from FastAPI backend
-    fetch('http://localhost:8000/api/reports')
+    fetch(`${API_URL}/api/reports`)
       .then(res => res.json())
       .then(data => {
         setReports(data);

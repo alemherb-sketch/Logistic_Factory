@@ -7,8 +7,10 @@ export default function Technicians() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
   const fetchTechnicians = () => {
-    fetch('http://localhost:8000/api/technicians')
+    fetch(`${API_URL}/api/technicians`)
       .then(res => res.json())
       .then(data => {
         setTechnicians(data);
@@ -23,7 +25,7 @@ export default function Technicians() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetch('http://localhost:8000/api/technicians', {
+    fetch(`${API_URL}/api/technicians`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
@@ -40,7 +42,7 @@ export default function Technicians() {
 
   const handleDelete = (id: number) => {
     if(confirm('¿Seguro que deseas eliminar este técnico?')) {
-      fetch(`http://localhost:8000/api/technicians/${id}`, { method: 'DELETE' })
+      fetch(`${API_URL}/api/technicians/${id}`, { method: 'DELETE' })
         .then(() => fetchTechnicians());
     }
   };

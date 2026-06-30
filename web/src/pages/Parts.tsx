@@ -7,8 +7,10 @@ export default function Parts() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', stock: 0 });
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
   const fetchParts = () => {
-    fetch('http://localhost:8000/api/parts')
+    fetch(`${API_URL}/api/parts`)
       .then(res => res.json())
       .then(data => {
         setParts(data);
@@ -23,7 +25,7 @@ export default function Parts() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetch('http://localhost:8000/api/parts', {
+    fetch(`${API_URL}/api/parts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
@@ -40,7 +42,7 @@ export default function Parts() {
 
   const handleDelete = (id: number) => {
     if(confirm('¿Seguro que deseas eliminar este repuesto?')) {
-      fetch(`http://localhost:8000/api/parts/${id}`, { method: 'DELETE' })
+      fetch(`${API_URL}/api/parts/${id}`, { method: 'DELETE' })
         .then(() => fetchParts());
     }
   };
