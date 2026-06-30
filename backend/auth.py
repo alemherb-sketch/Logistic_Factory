@@ -1,8 +1,16 @@
+"""Authentication using ONLY the Python standard library.
+
+No third-party crypto deps (no bcrypt / pyjwt) so the build on Render's free
+tier can't fail on a compiled wheel. Passwords use PBKDF2-HMAC-SHA256; tokens
+are compact HMAC-SHA256 signed JSON (a minimal JWT-style token).
+"""
 import os
+import json
+import hmac
+import base64
+import hashlib
 import datetime
 
-import bcrypt
-import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -10,50 +18,83 @@ from sqlalchemy.orm import Session
 import models
 from database import get_db, SessionLocal
 
-# Stable secret across restarts (Render: set JWT_SECRET with generateValue:true).
-JWT_SECRET = os.getenv("JWT_SECRET") or "dev-insecure-secret-change-me"
-JWT_ALGORITHM = "HS256"
+# Stable secret across restarts (Render: JWT_SECRET via generateValue:true).
+SECRET = (os.getenv("JWT_SECRET") or "dev-insecure-secret-change-me").encode("utf-8")
 TOKEN_TTL_HOURS = 24 * 7  # 1 semana
+PBKDF2_ITERATIONS = 200_000
 
-# Only used to pull the "Authorization: Bearer <token>" header; login is JSON.
+# Only used to read the "Authorization: Bearer <token>" header; login is JSON.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login", auto_error=False)
 
 
+# --- password hashing (PBKDF2) ---
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    salt = os.urandom(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, PBKDF2_ITERATIONS)
+    return "pbkdf2_sha256${}${}${}".format(
+        PBKDF2_ITERATIONS,
+        base64.b64encode(salt).decode(),
+        base64.b64encode(dk).decode(),
+    )
 
 
-def verify_password(password: str, hashed: str) -> bool:
+def verify_password(password: str, stored: str) -> bool:
     try:
-        return bcrypt.checkpw(password.encode("utf-8"), (hashed or "").encode("utf-8"))
+        algo, iters, salt_b64, hash_b64 = (stored or "").split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        dk = hashlib.pbkdf2_hmac(
+            "sha256", password.encode("utf-8"), base64.b64decode(salt_b64), int(iters)
+        )
+        return hmac.compare_digest(dk, base64.b64decode(hash_b64))
     except Exception:
         return False
 
 
+# --- token (HMAC-signed JSON) ---
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def _b64url_decode(s: str) -> bytes:
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
+def _sign(body: str) -> str:
+    return _b64url(hmac.new(SECRET, body.encode(), hashlib.sha256).digest())
+
+
 def create_access_token(user: models.User) -> str:
-    payload = {
-        "sub": user.username,
-        "role": user.role,
-        "uid": user.id,
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=TOKEN_TTL_HOURS),
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    exp = datetime.datetime.utcnow() + datetime.timedelta(hours=TOKEN_TTL_HOURS)
+    payload = {"sub": user.username, "role": user.role, "uid": user.id, "exp": int(exp.timestamp())}
+    body = _b64url(json.dumps(payload, separators=(",", ":")).encode())
+    return f"{body}.{_sign(body)}"
 
 
+def _decode_token(token: str):
+    try:
+        body, sig = token.split(".")
+        if not hmac.compare_digest(sig, _sign(body)):
+            return None
+        payload = json.loads(_b64url_decode(body))
+        if int(payload.get("exp", 0)) < int(datetime.datetime.utcnow().timestamp()):
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+# --- FastAPI dependencies ---
 def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ) -> models.User:
     creds_exc = HTTPException(
         status_code=401, detail="No autenticado", headers={"WWW-Authenticate": "Bearer"}
     )
-    if not token:
+    payload = _decode_token(token) if token else None
+    if not payload:
         raise creds_exc
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        username = payload.get("sub")
-    except Exception:
-        raise creds_exc
-    user = db.query(models.User).filter(models.User.username == username).first()
+    user = db.query(models.User).filter(models.User.username == payload.get("sub")).first()
     if not user:
         raise creds_exc
     return user
@@ -71,13 +112,11 @@ def seed_admin():
     try:
         if db.query(models.User).filter(models.User.role == "admin").first():
             return
-        username = os.getenv("ADMIN_USERNAME") or "admin"
-        password = os.getenv("ADMIN_PASSWORD") or "admin123"
         db.add(
             models.User(
-                username=username,
+                username=os.getenv("ADMIN_USERNAME") or "admin",
                 full_name="Administrador",
-                hashed_password=hash_password(password),
+                hashed_password=hash_password(os.getenv("ADMIN_PASSWORD") or "admin123"),
                 role="admin",
             )
         )

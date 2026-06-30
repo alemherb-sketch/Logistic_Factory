@@ -3,5 +3,3 @@ uvicorn
 sqlalchemy
 pydantic
 psycopg2-binary
-bcrypt
-pyjwt

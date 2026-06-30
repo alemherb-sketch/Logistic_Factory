@@ -20,8 +20,12 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup():
-    # Create the bootstrap admin account if none exists.
-    auth.seed_admin()
+    # Create the bootstrap admin account if none exists. Never let a seeding
+    # hiccup take the whole API down.
+    try:
+        auth.seed_admin()
+    except Exception as e:
+        print(f"[startup] seed_admin failed: {e}")
 
 
 @app.get("/")
