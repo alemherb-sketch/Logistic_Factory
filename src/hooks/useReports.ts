@@ -21,9 +21,23 @@ export interface Report {
   sync_status: 'pending' | 'synced';
 }
 
+import Constants from 'expo-constants';
+
 const STORAGE_KEY = '@reports_history';
-// This API URL will be the FastAPI endpoint once deployed. For local testing, we can use the local IP.
-const API_URL = 'http://10.0.2.2:8000/api/reports/sync'; // 10.0.2.2 for Android emulator
+
+// Helper to get the correct API URL depending on how the app is running
+const getApiUrl = () => {
+  // If running in Expo Go on a physical device, get the PC's local IP address
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    return `http://${ip}:8000/api/reports/sync`;
+  }
+  // Fallback for Android emulator
+  return 'http://10.0.2.2:8000/api/reports/sync';
+};
+
+const API_URL = getApiUrl();
 
 export function useReports() {
   const [reports, setReports] = useState<Report[]>([]);
