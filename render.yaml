@@ -29,7 +29,6 @@ services:
   - type: web
     name: logistic-factory-web
     env: static
-    region: ohio
     buildCommand: "cd web && npm install && npm run build"
     staticPublishPath: ./web/dist
     envVars:
